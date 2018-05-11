@@ -1,7 +1,7 @@
-'''
+"""
 you should fill the func given here
 all the other imports/constants/classes/func should be stored here and only here (not in other files)
-'''
+"""
 
 ############################
 # Insert your imports here
@@ -60,5 +60,3 @@ def truthful_bidding_agent(tx_size, value, urgency, mempool_data, block_size, ti
 
 	z = value*(2**(-3.6*urgency))
 	return z
-
-	
