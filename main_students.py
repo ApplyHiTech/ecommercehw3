@@ -1,13 +1,13 @@
 #!/usr/local/bin/python
 # -*- coding: utf-8 -*-
 
-'''
+"""
 we will be working with similar main, you should not change this file!
 all your imports/constants/classes/func should be held in hw2_students.py
-'''
+"""
 
 from hw2_part1 import * 
-
+import os
 
 block_size=1000
 mempool_data_name='bitcoin_mempool_data.json'
@@ -38,7 +38,7 @@ def main():
 	############################
 
 	bid_true=truthful_bidding_agent(225, 4000, 0.4, mempool_data, block_size)
-	bid_students=forward_bidding_agent(225, 4000, 0.4, mempool_data, block_size)
+	bid_students=forward_bidding_agent(225, 4000, 0.4, mempool_data, block_size,time_added=1)
 	print ('bid of truthful agent: %s, bid of student agent: %s' %(bid_true, bid_students))
 	
 
