@@ -1,14 +1,27 @@
-"""
+'''
 you should fill the func given here
 all the other imports/constants/classes/func should be stored here and only here (not in other files)
-"""
+'''
 
 ############################
 # Insert your imports here
 ############################
+import pandas as pd
+
 
 
 def load_mempool_data(mempool_data_full_path, current_time=1510264253.0):
+	#read json to pandas
+	df = pd.read_json(mempool_data_full_path,orient='index')
+
+	# filter for time(T)<current_time < Remove(T)
+	df_before = df['time']<current_time
+	df_after = df['removed']>=current_time
+
+	df_pending = df[df_before & df_after]
+
+	# return pending transactions
+	return df_pending
 	pass
 
 ############################
@@ -49,14 +62,16 @@ def VCG(block_size, tx_list, mempool_data):
 # Part 2
 ############################
 	
-def forward_bidding_agent(tx_size, value, urgency, mempool_data, block_size, time_added):
+def forward_bidding_agent(tx_size, value, urgency, mempool_data, block_size):
 
 	z = 100.00
 	# return the bidder bid [satoshi]
 	return z
 	
 
-def truthful_bidding_agent(tx_size, value, urgency, mempool_data, block_size, time_added=0):
+def truthful_bidding_agent(tx_size, value, urgency, mempool_data, block_size):
 
 	z = value*(2**(-3.6*urgency))
 	return z
+
+	
