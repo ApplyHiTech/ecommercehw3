@@ -9,7 +9,7 @@ all your imports/constants/classes/func should be held in hw2_students.py
 from hw2_part1 import * 
 import os
 
-block_size=10000
+block_size=1000
 mempool_data_name='bitcoin_mempool_data.json'
 
 # load the data once for all func of the mandatory part , at your choosing (class, dict, pandas, etc..)
