@@ -22,25 +22,19 @@ def main():
 	############################
 	# Question 1
 	############################
-
 	tx_to_insert_list=greedy_knapsack(block_size, mempool_data)
 	print ('pay-your-bid revenue: ', evaluate_block(tx_to_insert_list, mempool_data))
 
-	
 	vcg=VCG(block_size, tx_to_insert_list, mempool_data)
 	print ('vcg revenue: ',sum(vcg.values()))
-	
-	
+
 	############################
 	# Question 2
 	############################
-
 	bid_true=truthful_bidding_agent(225, 4000, 0.4, mempool_data, block_size)
 	bid_students=forward_bidding_agent(225, 4000, 0.4, mempool_data, block_size)
 	print ('bid of truthful agent: %s, bid of student agent: %s' %(bid_true, bid_students))
-	
 
-	
 if __name__ == "__main__":
 	main()
 
