@@ -1,10 +1,10 @@
 #!/usr/local/bin/python
 # -*- coding: utf-8 -*-
 
-'''
+"""
 we will be working with similar main, you should not change this file!
 all your imports/constants/classes/func should be held in hw2_students.py
-'''
+"""
 
 from hw2_part1 import * 
 import os
