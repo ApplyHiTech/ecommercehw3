@@ -16,7 +16,9 @@ def load_mempool_data(mempool_data_full_path, current_time=1510264253.0):
     df_pending = df[df_before & df_after]
 
     # return pending transactions
+    # test
     return df_pending
+
 
 ############################
 # Part 1
