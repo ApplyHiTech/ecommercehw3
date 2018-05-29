@@ -1,11 +1,3 @@
-'''
-you should fill the func given here
-all the other imports/constants/classes/func should be stored here and only here (not in other files)
-'''
-
-############################
-# Insert your imports here
-############################
 import pandas as pd
 import numpy as np
 import math
