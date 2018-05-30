@@ -3,6 +3,7 @@ import numpy as np
 import math
 import operator
 import copy
+import os
 
 
 def load_mempool_data(mempool_data_full_path, current_time=1510264253.0):
@@ -146,10 +147,13 @@ def generate_gt(mempool_data,block_size,value):
     gt_tracker = 0
     z = 5000
     dict_gt = {}
-    while (remaining_mempool_data.shape[0])>0 and z >-1:
+    flag = True
+    while (remaining_mempool_data.shape[0])>0 and z >-1 and flag:
         gt_tracker+=1
         # get next block of transitions
         transitions_in_block = greedy_knapsack(block_size, remaining_mempool_data)
+        if len(transitions_in_block) == 0:
+            flag = False
 
         # get min fee per size
         min_fee_in_block = get_min_fee(transitions_in_block,mempool_data)
@@ -171,3 +175,189 @@ def generate_gt(mempool_data,block_size,value):
         z-=10
 
     return dict_gt
+"""
+def new_bidding_agent(value,urgency,size):
+    #default to ti = 750
+    if value/size < 500:
+        # we don't want to bid on this! Because it will be added late
+        # and will deliver super low value to us.
+        return 0
+
+    elif urgency > 0.9:
+        return 0
+
+    elif urgency < 0.01:
+        return 0
+
+    else:
+
+        return 500
+
+    #3.5M
+    #return 500
+
+    # 753K
+    if urgency < 0.5:
+    
+    
+    
+        return 0
+    else:
+
+        z = (value/size)*urgency
+    return  z
+   
+def update_z_values_of_agent(df):
+    # iterate through df
+    #print("update z")
+
+    for index,row in df.iterrows():
+        value = row["v"]
+        urgency = row["r"]
+        size = row["size"]
+        df.at[index,"z"] = new_bidding_agent(value,urgency,size)
+    # set z = new_bidding_agent(value,urgency,size) for each row
+
+    return df
+
+def evaluate_competition(mempool_data,block_size=1000):
+
+    # Read the hw2_part2 csv file
+    df_part2 = pd.read_csv(os.path.abspath("hw2_part2.csv"))
+
+    #print(df_part2)
+    df_part2 = update_z_values_of_agent(df_part2)
+    #print(df_part2)
+    z_values= df_part2
+    #z_index = df_part2.set_index("z")
+
+    # dict_tx_z = dictionary of key = tx_id and value = z (bid)
+    # run greedy on the mempool_data and output # dictionary of tx_id: time, fee_per_byte, time_o, time_initial
+    # tx_id, fee_per_byte, time_o, time_initial
+    remaining_mempool_data = copy.deepcopy(mempool_data)
+    gt_tracker = 0
+    dict_tx_id_time = {}
+    j = 1
+    flag = True
+    while (remaining_mempool_data.shape[0]) > 50 and flag:
+        if remaining_mempool_data.shape[0]%500 ==0:
+            print(remaining_mempool_data.shape[0])
+        j+=1
+        # print(j)
+        gt_tracker += 1
+        # get next block of transitions
+        transitions_in_block = greedy_knapsack(block_size, remaining_mempool_data)
+        if len(transitions_in_block) == 0:
+            flag = False
+
+        # get min fee per size
+        #time = gt_tracker * 60 + 1510264253.0
+
+        # remove transitions from remaining_mempool_data
+        for txid in transitions_in_block:
+            data = mempool_data.loc[txid]
+            remove_time = data['removed']
+            enter_time = data['time']
+            t_diff = remove_time-enter_time
+            #print("Enter %s , Remove %s, Diff %s" % (enter_time,remove_time,t_diff))
+            dict_tx_id_time[txid]={"time":remove_time,"fee_per_size":data['fee']/ data['size'],"time_initial":data['time'],"t_diff":t_diff}
+            remaining_mempool_data = remaining_mempool_data[remaining_mempool_data.txid != txid]
+    print(dict_tx_id_time)
+
+    # compute l2 value between (dict_tx_z and mempool_data 'fee-per-byte' for all transactions
+    #z_values = list(df_part2["Z"])
+
+    # THE TRANSACTION IDS ARE ALL RETURNED TEH SAME BUT I NEED TO GO TO SLEEP.
+    min_pairs_tuple = compute_differences(z_values,dict_tx_id_time)
+
+    #get_top_ten k with smallest l2 values.
+    k = 10
+    df_tup = pd.DataFrame(min_pairs_tuple, columns=["v","r","size","z","tx","min_diff","t_diff"]).sort_values(by=["t_diff"])
+    #print(df_tup)
+    df_tup_min_k = df_tup[:k]
+    #print(df_tup[:k])
+    #print("Hey")
+    new_tup = []
+    for index,row in df_tup_min_k.iterrows():
+        tx = row["tx"]
+        z = row["z"]
+        v = row["v"]
+        r = row["r"]
+        size = row["size"]
+        time_diff = row["t_diff"]
+        min_diff = row["min_diff"]
+        new_tup += [{"tx":tx,
+                    "t_diff":time_diff,
+                    "min_diff":min_diff,
+                    "z":z,
+                    "value": v,
+                    "urgency":r,
+                    "block_size":size}]
+    print(new_tup)
+    print(compute_all_w(new_tup))
+
+def compute_all_w(list_of_info):
+    #print(list_of_info)
+    val = 0
+    for i in list_of_info:
+        #print(i)
+        t_diff = i["t_diff"]
+        urgency = i["urgency"]
+        value = i["value"]
+        z = i["z"]
+        block_size = i["block_size"]
+        print("value: %s * 2 ** (-%s*%s)-%s*%s" % (value,t_diff,urgency,z,block_size))
+        val += compute_w(t_diff,urgency,value,z,block_size)
+    return val
+
+    # compute sum wi for all k transactions.
+    # t_diff =0 #time difference
+    # urgency = 0 #given as r
+    # value = 0 #given as v
+    # z = 0 #bid
+    # block_size
+def compute_w(t_diff,urgency,value,z,block_size):
+
+    val = value*(2**(-t_diff*urgency/1000))-z*block_size
+    print("w_i = %s" % val)
+    return val
+
+def compute_differences(z_values,dict_tx_id_time):
+    #returns dictionary of closest tx to bid
+    ret_dict = {}
+    tup=[]
+    #print("TEST")
+    large_number = 1000000
+    #print(z_values)
+    for index,row in z_values.iterrows():
+        z = row["z"]
+        val= row["v"]
+        r = row["r"]
+        size = row["size"]
+        min_diff = large_number
+        tran_i = -1
+        #print("Length of Dict_tx %s" % len(dict_tx_id_time))
+        t_diff = -1
+        for i in dict_tx_id_time:
+            a = dict_tx_id_time[i]["fee_per_size"]
+            b = z
+            #print ("a = %s, b = %s" %(a,b))
+            l2_val = l2_norm(a,b)
+
+            if min_diff > l2_val:
+                min_diff = l2_val
+                tran_i = i
+                t_diff = dict_tx_id_time[i]["t_diff"]
+
+        #ret_dict[z] = {"v":row["v"],"tx": tran_i, "diff": min_diff}
+        tup+=[(val,r,size,z,tran_i,min_diff,t_diff)]
+    #print("End  of compute")
+    #print(ret_dict)
+    return tup
+
+def l2_norm(a,b):
+    #print("L2 Norm")
+    x= math.pow(abs(math.pow(a,2)-math.pow(b,2)),.5)
+    #print(x)
+    return x
+"""
