@@ -2,17 +2,42 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
+from sklearn.utils import shuffle
 
 #import Timer
 
+# Generate the 5 files for init.
+
+
+#Create Train and Test Files
+"""
+dataset = shuffle(pd.read_csv('dataset.csv')) #Randomly shuffle the rows
+cols_to_x = ['user','movie']
+cols_to_y = ['rate']
+train_percent = 0.8
+train_length = int(train_percent*dataset.shape[0])
+test_length = train_length+1
+
+train_x = (dataset[cols_to_x][0:train_length])
+test_x = (dataset[cols_to_x][test_length:])
+train_x.to_csv("train_x.csv")
+test_x.to_csv("test_x.csv")
+
+train_y = (dataset[cols_to_y][0:train_length])
+test_y = (dataset[cols_to_y][test_length:])
+train_y.to_csv("train_y.csv")
+test_y.to_csv("test_y.csv")
+"""
 
 class ModelData:
     """The class reads 5 files as specified in the init function, it creates basic containers for the data.
     See the get functions for the possible options, it also creates and stores a unique index for each user and movie
     """
 
+
     def __init__(self, train_x, train_y, test_x, test_y, movie_data):
         """Expects 4 data set files with index column (train and test) and 1 income + genres file without index col"""
+
         self.train_x = pd.read_csv(train_x, index_col=[0])
         self.train_y = pd.read_csv(train_y, index_col=[0])
         self.test_x = pd.read_csv(test_x, index_col=[0])
@@ -115,15 +140,18 @@ def fit_parameters(matrix_a, vector_c):
 
 def calc_parameters(r_avg, train_x, train_y, data: ModelData = None):
     # TODO: Modify this function to return the calculated average parameters vector b (slides 24 - 37).
+
     users = data.get_users()
     movies = data.get_movies()
     b = np.array(users + movies)
+    print(b)
     return b
 
 
 def calc_average_rating(train_y):
     # TODO: Modify this function to return the average rating r_avg.
-    r_avg = np.sum([x * 0.01 for x in range(100)])
+    # DR: Done.
+    r_avg = train_y["rate"].mean()
     return r_avg
 
 
