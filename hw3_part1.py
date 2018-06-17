@@ -2,14 +2,16 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+
 from sklearn.utils import shuffle
 
-#import Timer
+import Timer
 
 # Generate the 5 files for init.
 
 
-#Create Train and Test Files
+# Create Train and Test Files
 """
 dataset = shuffle(pd.read_csv('dataset.csv')) #Randomly shuffle the rows
 cols_to_x = ['user','movie']
@@ -139,28 +141,84 @@ def fit_parameters(matrix_a, vector_c):
 
 
 def calc_parameters(r_avg, train_x, train_y, data: ModelData = None):
-    # TODO: Modify this function to return the calculated average parameters vector b (slides 24 - 37).
+    # TO DO: Modify this function to return the calculated average parameters vector b (slides 24 - 37).
 
     users = data.get_users()
     movies = data.get_movies()
-    b = np.array(users + movies)
-    print(b)
-    return b
+    print("There are %s uers and %s movies" % (len(users),len(movies)))
+    b_user = {} # users
+    b_item = {} # movie
+    b0 = []
+    for u in users:
+        # get index of all users - movie pairings
+        list_indexes = data.train_x[data.train_x["user"]==u].index.tolist()
+        tot_rating = 0
+        for j in list_indexes:
+            tot_rating += data.train_y.loc[j]["rate"]
+        b_user[u]= tot_rating/len(list_indexes) - r_avg
+        b0 += [[u,tot_rating/len(list_indexes) - r_avg]]
+    #print(b_user)
+
+    for m in movies:
+        # get index of all movies - movie pairings
+        list_indexes = data.train_x[data.train_x["movie"]==m].index.tolist()
+        tot_rating = 0
+        for j in list_indexes:
+            tot_rating += data.train_y.loc[j]["rate"]
+        b_item[m]= tot_rating/len(list_indexes) - r_avg
+        b0 += [[m, tot_rating / len(list_indexes) - r_avg]]
+    print(b0)
+    #b = np.array([b_user],[b_item])
+    #print(len(b))
+    return b0
 
 
 def calc_average_rating(train_y):
-    # TODO: Modify this function to return the average rating r_avg.
+    # TO DO: Modify this function to return the average rating r_avg.
     # DR: Done.
     r_avg = train_y["rate"].mean()
     return r_avg
 
 
 def model_inference(test_x, vector_b, r_avg, data: ModelData = None):
-    # TODO: Modify this function to return the predictions list ordered by the same index as in argument test_x
+    # TO DO: Modify this function to return the predictions list ordered by the same index as in argument test_x
+    # DR Done... though messy Vector to Dictionary conversion.
+    users = data.get_users()
+    movies = data.get_movies()
+
+    # from vector to dict
+    b_user = {}
+    b_movies = {}
+    for i in range(len(users)):
+        k,v=vector_b[i]
+        b_user[k]=v
+
+    for j in range(len(movies)):
+        k,v=vector_b[j+len(users)]
+        b_movies[k]=v
+
+    # Testing to make sure the lengths are equivalent.
+    if len(vector_b)==len(users)+len(movies):
+        #print("great! ")
+        pass
+    else:
+        print("Bad")
+
+    # Generate Prediction List
     predictions_list = []
-    for i in test_x.index:
-        # print(i)
-        predictions_list += [r_avg]
+    for index,row in test_x.iterrows():
+        user = row["user"]
+        movie = row["movie"]
+        bu=0
+        bi=0
+        if user in b_user.keys():
+            bu = b_user[user]
+        if bi in b_movies.keys():
+            bi = b_movies[movie]
+
+        predictions_list += [r_avg+bu+bi]
+
+
     return predictions_list
 
 
@@ -175,18 +233,41 @@ def model_inference_with_income(test_x, vector_b, r_avg, data: ModelData = None)
 
 
 def calc_error(predictions_df, test_df):
-    # TODO: Modify this function to return the RMSE
-    return 1.75
+    # TO DO: Modify this function to return the RMSE
+    #
+    val = ((predictions_df.r_hat-test_df.rate)**2).mean()**.5
+    return val
 
 
 def calc_avg_error(predictions_df, test_df):
-    # TODO: Modify this function to return a dictionary of tuples {MOVIE_ID:(RMSE, RATINGS)}
+    # TO DO: Modify this function to return a dictionary of tuples {MOVIE_ID:(RMSE, RATINGS)}
     m_error = defaultdict(tuple)
     # In this example movie 3 was ranked by 5 users and has an RMSE of 0.9
-    m_error[3] = (0.9, 5)
+
+    # Get unique movie ids
+    movies = predictions_df.movie.unique()
+    for m in movies:
+        df_predict = predictions_df[predictions_df["movie"]==m]
+        index_list = df_predict.index.tolist()
+        df_test = test_df.loc[index_list]
+        rmse = calc_error(df_predict,df_test)
+        numb_ratings = len(index_list)
+        m_error[m]=(rmse,numb_ratings)
+
     return m_error
 
 
 def plot_error_per_movie(movie_error):
     # TODO: Modify this function to plot the graph y:(RMSE of movie i) x:(number of users rankings)
+
+    x = []
+    y = []
+    for k,v in movie_error.items():
+        x += [v[1]]
+        y += [v[0]]
+
+    plt.scatter(x,y)
+    plt.xlabel("Number of Users")
+    plt.ylabel("RMSE")
+    plt.show()
     pass

@@ -1,5 +1,5 @@
 import hw3_part1 as st
-#import Timer
+import Timer
 
 import pandas as pd
 
@@ -26,17 +26,17 @@ def main():
 
     """Use the model to inference predictions on the test set"""
     test_predictions = st.model_inference(data.test_x, b0, r_avg, data)
+    #print(test_predictions)
+
     data.test_x['r_hat'] = test_predictions
+    #print(data.test_x)
     data.test_x['r_hat'] = data.test_x['r_hat'].clip(0.5, 5)
-
-
-def rest_main():
-
 
     """Use the model to inference predictions on the train set"""
     train_predictions = st.model_inference(data.train_x, b0, r_avg, data)
     data.train_x['r_hat'] = train_predictions
     data.train_x['r_hat'] = data.train_x['r_hat'].clip(0.5, 5)
+    print(data.train_x)
 
     """Calc the RMSE of the train set and the test set, then """
     # rmse_timer = Timer.Timer('RMSE calculation')
@@ -45,12 +45,15 @@ def rest_main():
 
     """calc the average RMSE for each movie in each set and plot it as a graph (save the graph)"""
     movie_train_error = st.calc_avg_error(data.train_x, data.train_y)
+    #print(movie_train_error)
+
     st.plot_error_per_movie(movie_train_error)
     movie_test_error = st.calc_avg_error(data.test_x, data.test_y)
     st.plot_error_per_movie(movie_test_error)
     # rmse_timer.stop()
-
     # model0_timer.stop()
+
+def rest_main():
 
     # *************** Basic Model with fitted parameters to minimize the RMSE  ***************
     # model1_timer = Timer.Timer('Fitted Model without income Construction')
