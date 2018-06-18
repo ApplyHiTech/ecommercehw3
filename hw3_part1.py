@@ -3,6 +3,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.sparse import dok_matrix
 
 from sklearn.utils import shuffle
 
@@ -50,6 +51,9 @@ class ModelData:
         self.incomes = self._generate_income_dict()
         self.movie_index = self._generate_movie_index()
         self.user_index = self._generate_user_index()
+        print(self.movie_index)
+        print("user_index")
+        print(self.user_index)
 
     def _generate_users(self):
         users = sorted(set(self.train_x['user']))
@@ -112,11 +116,44 @@ class ModelData:
 
 def create_coefficient_matrix(train_x, data: ModelData = None):
     #matrix_timer = Timer.Timer('Matrix A creation')
-    # TODO: Modify this function to return the coefficient matrix A as seen in the lecture (slides 24 - 37).
-    users = data.get_users()
-    matrix_a = np.array([[1 for _ in users] for _ in range(1000)])
+    #https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.dok_matrix.html#scipy.sparse.dok_matrix
+
+    # TO DO: Modify this function to return the coefficient matrix A as seen in the lecture (slides 24 - 37).
+
     #matrix_timer.stop()
-    return matrix_a
+    total_users = len(data.user_index)
+    column_len = total_users+len(data.movie_index)
+
+    row_len = train_x.shape[0]
+
+    print("S MATRIX")
+    print(total_users, row_len, column_len)
+
+    # Matrix looks as follows:
+    #
+    # <columns = features, equal the index of users, u1,u2,u3...u_n followed by index of movies, m1,m2,m3...m_n>
+    # <rows = 1 sample in the train_x file>
+    #
+
+    S = dok_matrix((row_len + 1, column_len), dtype=np.float32)
+    print(S)
+    for j in range(column_len):
+        S[0, j] = 0.001 * np.random.random()
+    i=0 # the row in the sparse matrix.
+
+    for index,row in data.train_x.iterrows():
+        i+=1
+        # for each row in train_x, add 1 to user index and 1 to movie index
+        user = row["user"]
+        movie = row["movie"]
+        u_index = data.user_index[user]
+        m_index = data.movie_index[movie]
+
+        S[i,u_index]=1
+        S[i,m_index]=1
+
+
+    return S
 
 
 def create_coefficient_matrix_with_income(train_x, data: ModelData = None):
@@ -129,8 +166,9 @@ def create_coefficient_matrix_with_income(train_x, data: ModelData = None):
 
 
 def construct_rating_vector(train_y, r_avg):
-    # TODO: Modify this function to return vector C as seen in the lecture (slides 24 - 37).
-    y = [x for x in train_y.values]
+    # TO DO: Modify this function to return vector C as seen in the lecture (slides 24 - 37).
+    # DR done, just subtracted r_avg from each value
+    y = [x-r_avg for x in train_y.values]
     return np.array(y)
 
 
@@ -145,7 +183,7 @@ def calc_parameters(r_avg, train_x, train_y, data: ModelData = None):
 
     users = data.get_users()
     movies = data.get_movies()
-    print("There are %s uers and %s movies" % (len(users),len(movies)))
+    print("There are %s users and %s movies" % (len(users),len(movies)))
     b_user = {} # users
     b_item = {} # movie
     b0 = []
@@ -167,9 +205,6 @@ def calc_parameters(r_avg, train_x, train_y, data: ModelData = None):
             tot_rating += data.train_y.loc[j]["rate"]
         b_item[m]= tot_rating/len(list_indexes) - r_avg
         b0 += [[m, tot_rating / len(list_indexes) - r_avg]]
-    print(b0)
-    #b = np.array([b_user],[b_item])
-    #print(len(b))
     return b0
 
 
@@ -241,8 +276,8 @@ def calc_error(predictions_df, test_df):
 
 def calc_avg_error(predictions_df, test_df):
     # TO DO: Modify this function to return a dictionary of tuples {MOVIE_ID:(RMSE, RATINGS)}
+    # DR Done
     m_error = defaultdict(tuple)
-    # In this example movie 3 was ranked by 5 users and has an RMSE of 0.9
 
     # Get unique movie ids
     movies = predictions_df.movie.unique()
@@ -258,7 +293,8 @@ def calc_avg_error(predictions_df, test_df):
 
 
 def plot_error_per_movie(movie_error):
-    # TODO: Modify this function to plot the graph y:(RMSE of movie i) x:(number of users rankings)
+    # TO DO: Modify this function to plot the graph y:(RMSE of movie i) x:(number of users rankings)
+    # DR done.
 
     x = []
     y = []

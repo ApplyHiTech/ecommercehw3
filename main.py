@@ -1,11 +1,11 @@
 import hw3_part1 as st
 import Timer
-
+from scipy.sparse import dok_matrix
+import numpy as np
 import pandas as pd
 
 def main():
 
-    print("helloworld")
 
     """Read the data files with the class ModelData into the a data object"""
     # total_time = Timer.Timer('Total running time')
@@ -53,21 +53,22 @@ def main():
     # rmse_timer.stop()
     # model0_timer.stop()
 
-def rest_main():
-
     # *************** Basic Model with fitted parameters to minimize the RMSE  ***************
     # model1_timer = Timer.Timer('Fitted Model without income Construction')
 
     """Construct vector C from the train set as (r_i - r_avg) """
     c = st.construct_rating_vector(data.train_y, r_avg)
-
+    print(c)
     """Construct the coefficients matrix A"""
     A1 = st.create_coefficient_matrix(data.train_x, data)
 
+
+def rest_main():
     """Fit the parameters vector to minimize the least squares error"""
     b1 = st.fit_parameters(A1, c)
 
-    """Use the basic model r_hat = r_avg + b_u + b_i to inference predictions on the test set"""
+
+"""Use the basic model r_hat = r_avg + b_u + b_i to inference predictions on the test set"""
     test_predictions = st.model_inference(data.test_x, b1, r_avg, data)
     data.test_x['r_hat'] = test_predictions
     data.test_x['r_hat'] = data.test_x['r_hat'].clip(0.5, 5)
