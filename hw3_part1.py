@@ -2,8 +2,35 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.sparse import dok_matrix
+from scipy import sparse
 
-#import Timer
+from sklearn.utils import shuffle
+
+import Timer
+
+# Generate the 5 files for init.
+
+
+# Create Train and Test Files
+
+dataset = shuffle(pd.read_csv('dataset.csv')) #Randomly shuffle the rows
+cols_to_x = ['user','movie']
+cols_to_y = ['rate']
+train_percent = 0.8
+train_length = int(train_percent*dataset.shape[0])
+test_length = train_length+1
+
+train_x = (dataset[cols_to_x][0:train_length])
+test_x = (dataset[cols_to_x][test_length:])
+train_x.to_csv("train_x.csv")
+test_x.to_csv("test_x.csv")
+
+train_y = (dataset[cols_to_y][0:train_length])
+test_y = (dataset[cols_to_y][test_length:])
+train_y.to_csv("train_y.csv")
+test_y.to_csv("test_y.csv")
 
 
 class ModelData:
@@ -11,8 +38,10 @@ class ModelData:
     See the get functions for the possible options, it also creates and stores a unique index for each user and movie
     """
 
+
     def __init__(self, train_x, train_y, test_x, test_y, movie_data):
         """Expects 4 data set files with index column (train and test) and 1 income + genres file without index col"""
+
         self.train_x = pd.read_csv(train_x, index_col=[0])
         self.train_y = pd.read_csv(train_y, index_col=[0])
         self.test_x = pd.read_csv(test_x, index_col=[0])
@@ -84,55 +113,168 @@ class ModelData:
 
 
 def create_coefficient_matrix(train_x, data: ModelData = None):
-    #matrix_timer = Timer.Timer('Matrix A creation')
-    # TODO: Modify this function to return the coefficient matrix A as seen in the lecture (slides 24 - 37).
-    users = data.get_users()
-    matrix_a = np.array([[1 for _ in users] for _ in range(1000)])
-    #matrix_timer.stop()
-    return matrix_a
+    matrix_timer = Timer.Timer('Matrix A creation')
+    #https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.dok_matrix.html#scipy.sparse.dok_matrix
+
+    # TO DO: Modify this function to return the coefficient matrix A as seen in the lecture (slides 24 - 37).
+
+    matrix_timer.stop()
+    total_users = len(data.user_index)
+    column_len = total_users+len(data.movie_index)
+
+    row_len = train_x.shape[0]
+
+    print("S MATRIX")
+    print(total_users, row_len, column_len)
+
+    # Matrix looks as follows:
+    #
+    # <columns = features, equal the index of users, u1,u2,u3...u_n followed by index of movies, m1,m2,m3...m_n>
+    # <rows = 1 sample in the train_x file>
+    #
+
+    S = dok_matrix((row_len + 1, column_len), dtype=np.float32)
+
+    for j in range(column_len):
+        S[0, j] = 0.001 * np.random.random()
+    i=0 # the row in the sparse matrix.
+
+    for index,row in data.train_x.iterrows():
+        i+=1
+        # for each row in train_x, add 1 to user index and 1 to movie index
+        user = row["user"]
+        movie = row["movie"]
+        u_index = data.user_index[user]
+        m_index = data.movie_index[movie]
+
+        S[i,u_index]=1
+        S[i,m_index]=1
+
+
+    return S
 
 
 def create_coefficient_matrix_with_income(train_x, data: ModelData = None):
-    #matrix_timer = Timer.Timer('Matrix A with income creation')
-    # TODO: Modify this function to return a coefficient matrix A for the new model with income
-    users = data.get_users()
-    matrix_a = np.array([[1 for _ in users] for _ in range(1000)])
-    #matrix_timer.stop()
-    return matrix_a
+    matrix_timer = Timer.Timer('Matrix A with income creation')
+    # TO DO: Modify this function to return a coefficient matrix A for the new model with income
+
+    total_users = len(data.user_index)
+    column_len = total_users + 1 #I_m
+
+    row_len = train_x.shape[0]
+
+    print("A MATRIX")
+    print(total_users, row_len, column_len)
+    print("numb of movies")
+    print(len(data.movie_index))
+    # Matrix looks as follows:
+    #
+    # <columns = features, equal the index of users, u1,u2,u3...u_n followed by index of movies, m1,m2,m3...m_n>
+    # <rows = 1 sample in the train_x file>
+    #
+
+    S = dok_matrix((row_len + 1, column_len), dtype=np.float32)
+
+    for j in range(column_len):
+        S[0, j] = 0.001 * np.random.random()
+    i = 0  # the row in the sparse matrix.
+    tes = data.incomes
+    print(data.incomes)
+    i_m = column_len-1 #last column
+    for index, row in data.train_x.iterrows():
+        i += 1
+        # for each row in train_x, add 1 to user index and 1 to movie index
+        user = row["user"]
+        movie = row["movie"]
+        u_index = data.user_index[user]
+        m_income = data.incomes[movie]
+        S[i, u_index] = 1
+        S[i, i_m] = m_income
+
+    matrix_timer.stop()
+    return S
 
 
 def construct_rating_vector(train_y, r_avg):
-    # TODO: Modify this function to return vector C as seen in the lecture (slides 24 - 37).
-    y = [x for x in train_y.values]
+    # TO DO: Modify this function to return vector C as seen in the lecture (slides 24 - 37).
+    # DR done, just subtracted r_avg from each value
+    y = [x-r_avg for x in train_y.values]
     return np.array(y)
 
 
 def fit_parameters(matrix_a, vector_c):
-    # TODO: Modify this function to return vector b*, the solution of the equation (slides 24 - 37).
-    result = np.ones(100)
-    return result
+    # TO DO: Modify this function to return vector b*, the solution of the equation (slides 24 - 37).
+    print("start fit parameter")
 
+    vec_c = np.insert(vector_c,0,1)
+
+    new_matrix = matrix_a.todense()
+
+    result = np.linalg.lstsq(new_matrix,vec_c,rcond=None)
+    result_re = result[0]
+    result_return = np.delete(result_re,0)
+
+    return result_return
 
 def calc_parameters(r_avg, train_x, train_y, data: ModelData = None):
-    # TODO: Modify this function to return the calculated average parameters vector b (slides 24 - 37).
+    # TO DO: Modify this function to return the calculated average parameters vector b (slides 24 - 37).
+
     users = data.get_users()
     movies = data.get_movies()
-    b = np.array(users + movies)
-    return b
+    total = len(users)+len(movies)
+
+    b0 = np.zeros(total)
+
+    for u in users:
+        # get index of all users - movie pairings
+        list_indexes = train_x[train_x["user"]==u].index.tolist()
+        tot_rating = 0
+        for j in list_indexes:
+            tot_rating += train_y.loc[j]["rate"]
+        bu = tot_rating/len(list_indexes) - r_avg
+        u_index = data.user_index[u]
+
+        b0[u_index] = bu
+
+    for m in movies:
+        # get index of all movies - movie pairings
+        list_indexes = train_x[train_x["movie"]==m].index.tolist()
+        tot_rating = 0
+        for j in list_indexes:
+            tot_rating += train_y.loc[j]["rate"]
+        bi = tot_rating/len(list_indexes) - r_avg
+        m_index = data.movie_index[m]
+        b0[m_index] = bi
+
+    return b0
 
 
 def calc_average_rating(train_y):
-    # TODO: Modify this function to return the average rating r_avg.
-    r_avg = np.sum([x * 0.01 for x in range(100)])
+    # TO DO: Modify this function to return the average rating r_avg.
+    # DR: Done.
+    r_avg = train_y["rate"].mean()
     return r_avg
 
 
-def model_inference(test_x, vector_b, r_avg, data: ModelData = None):
-    # TODO: Modify this function to return the predictions list ordered by the same index as in argument test_x
+def model_inference(test_x, vector_b, r_avg, data: ModelData = None,flag=0):
+    # TO DO: Modify this function to return the predictions list ordered by the same index as in argument test_x
+    # DR Done... though messy Vector to Dictionary conversion.
+    # print(str(vector_b.shape))
+    # Generate Prediction List
+
+    print("start of Model Inference")
     predictions_list = []
-    for i in test_x.index:
-        # print(i)
-        predictions_list += [r_avg]
+    for index,row in test_x.iterrows():
+        user = row["user"]
+        movie = row["movie"]
+
+        u_index = data.user_index[user]
+        m_index = data.movie_index[movie]
+        bu = vector_b[u_index]
+        bi = vector_b[m_index]
+        value = r_avg+bu+bi
+        predictions_list += [value]
+
     return predictions_list
 
 
@@ -147,18 +289,42 @@ def model_inference_with_income(test_x, vector_b, r_avg, data: ModelData = None)
 
 
 def calc_error(predictions_df, test_df):
-    # TODO: Modify this function to return the RMSE
-    return 1.75
+    # TO DO: Modify this function to return the RMSE
+    #
+    val = ((predictions_df.r_hat-test_df.rate)**2).mean()**.5
+    return val
 
 
 def calc_avg_error(predictions_df, test_df):
-    # TODO: Modify this function to return a dictionary of tuples {MOVIE_ID:(RMSE, RATINGS)}
+    # TO DO: Modify this function to return a dictionary of tuples {MOVIE_ID:(RMSE, RATINGS)}
+    # DR Done
     m_error = defaultdict(tuple)
-    # In this example movie 3 was ranked by 5 users and has an RMSE of 0.9
-    m_error[3] = (0.9, 5)
+
+    # Get unique movie ids
+    movies = predictions_df.movie.unique()
+    for m in movies:
+        df_predict = predictions_df[predictions_df["movie"]==m]
+        index_list = df_predict.index.tolist()
+        df_test = test_df.loc[index_list]
+        rmse = calc_error(df_predict,df_test)
+        numb_ratings = len(index_list)
+        m_error[m]=(rmse,numb_ratings)
+
     return m_error
 
 
 def plot_error_per_movie(movie_error):
-    # TODO: Modify this function to plot the graph y:(RMSE of movie i) x:(number of users rankings)
+    # TO DO: Modify this function to plot the graph y:(RMSE of movie i) x:(number of users rankings)
+    # DR done.
+
+    x = []
+    y = []
+    for k,v in movie_error.items():
+        x += [v[1]]
+        y += [v[0]]
+
+    plt.scatter(x,y)
+    plt.xlabel("Number of Users")
+    plt.ylabel("RMSE")
+    plt.show()
     pass
